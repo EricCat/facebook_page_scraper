@@ -4,6 +4,8 @@
 [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://opensource.org/licenses/MIT) [![Python >=3.6.9](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
 <p> No need of API key, No limitation on number of requests. Import the library and <b> Just Do It !<b> </p>
+<br>
+<p> This is the repo from <a href="https://github.com/moda20/facebook_page_scraper" target='_blank'>moda20 version</a> </p>
 
 <!--TABLE of contents-->
 <h2> Table of Contents </h2>
@@ -71,6 +73,25 @@ python3 setup.py install
 ```
 pip3 install facebook-page-scraper
 ```
+
+Or, to install this latest master branch:
+
+```sh
+pip install git+https://github.com/EricCat/facebook_page_scraper.git@master
+```
+
+Or, to force update the branch after an update : 
+
+```sh
+pip install --force-reinstall --no-deps git+https://github.com/EricCat/facebook_page_scraper.git@master
+```
+
+And to add it to your requirements.txt manually : 
+
+```
+facebook-page-scraper @ git+https://github.com/EricCat/facebook_page_scraper.git@master
+```
+
 
 <br>
 <hr>
