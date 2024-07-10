@@ -42,12 +42,16 @@ class Facebook_scraper:
     # on each iteration __close_after_retry is called to check if retry have turned to 0
     # if it returns true,it will break the loop. After coming out of loop,driver will be closed and it will return post whatever was found
     
-    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None,
+    def __init__(self, page_or_group_name=None, url=None, posts_count=10, browser="chrome", proxy=None,
                  timeout=600, headless=True, isGroup=False, username=None, password=None, driver_install_config=None):
-        self.page_or_group_name = page_or_group_name
+        if url:
+            self.URL = url
+            self.page_or_group_name = page_or_group_name
+        else:
+            self.page_or_group_name = page_or_group_name
+            self.URL = "https://facebook.com/{}".format(self.page_or_group_name)
+        
         self.posts_count = int(posts_count)
-        # self.URL = "https://en-gb.facebook.com/pg/{}/posts".format(self.page_or_group_name)
-        self.URL = "https://facebook.com/{}".format(self.page_or_group_name)
         self.browser = browser
         self.__driver = ''
         self.proxy = proxy
@@ -59,7 +63,6 @@ class Facebook_scraper:
         self.password = password
         self.driver_install_config = driver_install_config
         self.__data_dict = {}  # this dictionary stores all post's data
-        # __extracted_post contains all the post's ID that have been scraped before and as it set() it avoids post's ID duplication.
         self.__extracted_post = set()
     
     def __start_driver(self):
@@ -93,8 +96,9 @@ class Facebook_scraper:
         # navigate to URL
         self.__driver.get(self.URL)
         # only login if username is provided
-        self.username is not None and Finder._Finder__login(self.__driver, self.username, self.password)
         Finder._Finder__accept_cookies(self.__driver)
+        self.username is not None and Finder._Finder__login(self.__driver, self.username, self.password)
+        
         self.__layout = Finder._Finder__detect_ui(self.__driver)
         # sometimes we get popup that says "your request couldn't be processed", however
         # posts are loading in background if popup is closed, so call this method in case if it pops up.
@@ -104,11 +108,11 @@ class Facebook_scraper:
                 self.__driver, self.__layout, self.timeout)
         # scroll down to bottom most
         Utilities._Utilities__scroll_down(self.__driver, self.__layout)
-        self.__handle_popup(self.__layout)
+        # self.__handle_popup(self.__layout)
         # timestamp limitation for scraping posts
         timestamp_edge_hit = False
         while (not timestamp_edge_hit) and (len(self.__data_dict) < self.posts_count) and elements_have_loaded:
-            self.__handle_popup(self.__layout)
+            # self.__handle_popup(self.__layout)
             # self.__find_elements(name)
             timestamp_edge_hit = self.__find_elements(minimum_timestamp)
             current_time = time.time()
@@ -335,6 +339,8 @@ class Facebook_scraper:
                 
                 image = Finder._Finder__find_all_image_url(post, self.__layout, self.__driver)
                 
+                if image['images'] == []:
+                    image['images'] = Finder._Finder__find_image_url(post, self.__layout)
                 # post_url = "https://www.facebook.com/{}/posts/{}".format(self.page_or_group_name,status)
                 
                 self.__data_dict[status] = {

@@ -30,7 +30,7 @@ class Finder:
     """
     Holds the collections of methods that finds element of the facebook's posts using selenium's webdriver's methods
     """
-
+    
     @staticmethod
     def __get_status_link(link_list):
         status = ""
@@ -61,7 +61,7 @@ class Finder:
                 status = link
                 break
         return status
-
+    
     @staticmethod
     def __find_status(post, layout, isGroup, driver, page_or_group_name):
         """finds URL of the post, then extracts link from that URL and returns it"""
@@ -69,31 +69,31 @@ class Finder:
             link = None
             status_link = None
             status = None
-
+            
             if layout == "old":
                 # aim is to find element that looks like <a href="URL" class="_5pcq"></a>
                 # after finding that element, get it's href value and pass it to different method that extracts post_id from that href
                 status_link = post.find_element(By.CLASS_NAME, "_5pcq").get_attribute(
-                    "href"
+                        "href"
                 )
                 logger.debug("old link layouut\n")
                 # extract out post id from post's url
                 status = Scraping_utilities._Scraping_utilities__extract_id_from_link(
-                    status_link
+                        status_link
                 )
             elif layout == "new":
-
+                
                 try:
                     link = post.find_element(
-                        By.CSS_SELECTOR,
-                        'span > a[role="link"]' if isGroup else 'span > a[aria-label][role="link"]'
+                            By.CSS_SELECTOR,
+                            'span > a[role="link"]' if isGroup else 'span > a[aria-label][role="link"]'
                     )
-
+                
                 except NoSuchElementException:
                     # try to hover over the time link
                     link = post.find_element(
-                        By.CSS_SELECTOR,
-                        'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]'
+                            By.CSS_SELECTOR,
+                            'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]'
                     )
                     actions = ActionChains(driver)
                     # scroll to the link
@@ -108,7 +108,7 @@ class Finder:
                     driver.execute_script("arguments[0].style.border='2px solid black'", link);
                     actions.move_to_element(link).perform()
                     time.sleep(2)
-
+                    
                     # actually not  useful to trigger the hover witht he mouse event
                     # should be deleted in the future
                     javaScript = """
@@ -119,8 +119,8 @@ class Finder:
                     driver.execute_script(javaScript, link)
                     try:
                         link = post.find_element(
-                            By.CSS_SELECTOR,
-                            'span > a[role="link"]' if isGroup else 'span > a[href*="/posts/"][role="link"]'
+                                By.CSS_SELECTOR,
+                                'span > a[role="link"]' if isGroup else 'span > a[href*="/posts/"][role="link"]'
                         )
                     except NoSuchElementException:
                         postId = Finder._Finder__find_post_id(post, layout)
@@ -132,17 +132,17 @@ class Finder:
                 if link is not None:
                     status_link = link.get_attribute("href")
                     status = Scraping_utilities._Scraping_utilities__extract_id_from_link(
-                        status_link
+                            status_link
                     )
-                    if not isGroup and status_link and status: #early exit for non group
+                    if not isGroup and status_link and status:  # early exit for non group
                         return (status, status_link, link)
-
+                
                 links = post.find_elements(By.TAG_NAME, 'a')
                 if links:
                     # Initialize variables to store the matching link element and URL
                     matching_link_element = None
                     post_url = None
-
+                    
                     # Iterate over links to find the first one that matches the criteria
                     for link in links:
                         href = link.get_attribute('href')
@@ -150,24 +150,22 @@ class Finder:
                             post_url = href  # Store the URL
                             matching_link_element = link  # Store the link element
                             break  # Exit the loop after finding the first match
-
+                    
                     # Check if a matching link was found
                     if post_url and matching_link_element:
                         status = Scraping_utilities._Scraping_utilities__extract_id_from_link(post_url)
                         # Now you have the URL, the status, and the matching link element itself
                         return (status, post_url, matching_link_element)
-
+        
         except NoSuchElementException:
             # if element is not found
             status = "NA"
-
+        
         except Exception as ex:
             logger.exception("Error at find_status method : {}".format(ex))
             status = "NA"
         return (status, status_link, link)
-
-
-
+    
     @staticmethod
     def __find_share(post, layout):
         """finds shares count of the facebook post using selenium's webdriver's method"""
@@ -175,42 +173,42 @@ class Finder:
             if layout == "old":
                 # aim is to find element that have datatest-id attribute as UFI2SharesCount/root
                 shares = post.find_element(
-                    By.CSS_SELECTOR, "._355t._4vn2"
+                        By.CSS_SELECTOR, "._355t._4vn2"
                 ).get_attribute("textContent")
                 shares = Scraping_utilities._Scraping_utilities__extract_numbers(shares)
             elif layout == "new":
                 element = post.find_element(
-                    By.CSS_SELECTOR, 'div:nth-child(2) > span > div > div > div:nth-child(1) > span'
+                        By.CSS_SELECTOR, 'div:nth-child(2) > span > div > div > div:nth-child(1) > span'
                 )
                 shares = "0"
                 if not element:
-                  return shares
+                    return shares
                 return element.text
             return shares
         except NoSuchElementException:
             # if element is not present that means there wasn't any shares
             shares = 0
-
+        
         except Exception as ex:
             logger.exception("Error at Find Share method : {}".format(ex))
             shares = 0
-
+        
         return shares
-
+    
     @staticmethod
     def __find_reactions(post):
         """finds all reaction of the facebook post using selenium's webdriver's method"""
         try:
             # find element that have attribute aria-label as 'See who reacted to this
             reactions_all = post.find_element(
-                By.CSS_SELECTOR, '[aria-label="See who reacted to this"]'
+                    By.CSS_SELECTOR, '[aria-label="See who reacted to this"]'
             )
         except NoSuchElementException:
             reactions_all = ""
         except Exception as ex:
             logger.exception("Error at find_reactions method : {}".format(ex))
         return reactions_all
-
+    
     @staticmethod
     def __find_comments(post, layout):
         """finds comments count of the facebook post using selenium's webdriver's method"""
@@ -218,46 +216,48 @@ class Finder:
             comments = ""
             if layout == "old":
                 comments = post.find_element(By.CSS_SELECTOR, "a._3hg-").get_attribute(
-                    "textContent"
+                        "textContent"
                 )
                 # extract numbers from text
                 comments = Scraping_utilities._Scraping_utilities__extract_numbers(
-                    comments
+                        comments
                 )
             elif layout == "new":
-                element = post.find_element(
-                    By.CSS_SELECTOR, 'div:nth-child(1) > span > div > div > div:nth-child(1) > span'
-                )
-                comments = 0
-                if element is None:
-                    return comments
-                return element.text
+                try:
+                    element = WebDriverWait(post, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR,
+                                                                                            "div.x1i10hfl.x1qjc9v5.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.x2lwn1j.xeuugli.xggy1nq.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x3nfvp2.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz")))
+                    comments_element = element.find_element(By.CSS_SELECTOR,
+                                                            "span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x3x7a5m.x6prxxf.xvq8zen.xo1l8bm.xi81zsa")
+                    comments_text = comments_element.get_attribute("textContent")
+                    comments = Scraping_utilities._Scraping_utilities__extract_numbers(comments_text)
+                except TimeoutException:
+                    comments = 0
         except NoSuchElementException:
             comments = 0
         except Exception as ex:
             logger.exception("Error at find_comments method : {}".format(ex))
             comments = 0
-
+        
         return comments
-
+    
     @staticmethod
     def __fetch_post_passage(href):
-
+        
         response = urllib.request.urlopen(href)
-
+        
         text = response.read().decode("utf-8")
-
+        
         post_message_div_finder_regex = (
-            '<div data-testid="post_message" class=".*?" data-ft=".*?">(.*?)<\/div>'
+                '<div data-testid="post_message" class=".*?" data-ft=".*?">(.*?)<\/div>'
         )
-
+        
         post_message = re.search(post_message_div_finder_regex, text)
-
+        
         replace_html_tags_regex = "<[^<>]+>"
         message = re.sub(replace_html_tags_regex, "", post_message.group(0))
-
+        
         return message
-
+    
     @staticmethod
     def __element_exists(element, css_selector):
         try:
@@ -265,7 +265,7 @@ class Finder:
             return True
         except NoSuchElementException:
             return False
-
+    
     @staticmethod
     def __find_content(post, driver, layout):
         """finds content of the facebook post using selenium's webdriver's method and returns string containing text of the posts"""
@@ -274,19 +274,19 @@ class Finder:
                 post_content = post.find_element(By.CLASS_NAME, "userContent")
                 # if 'See more' or 'Continue reading' is present in post
                 if Finder._Finder__element_exists(
-                    post_content, "span.text_exposed_link > a"
+                        post_content, "span.text_exposed_link > a"
                 ):
                     element = post_content.find_element(
-                        By.CSS_SELECTOR, "span.text_exposed_link > a"
+                            By.CSS_SELECTOR, "span.text_exposed_link > a"
                     )  # grab that element
                     # if element have already the onclick function, that means it is expandable paragraph
                     if element.get_attribute("onclick"):
                         # click 'see more' button to get hidden text as well
                         Utilities._Utilities__click_see_more(driver, post_content)
                         content = (
-                            Scraping_utilities._Scraping_utilities__extract_content(
-                                post_content
-                            )
+                                Scraping_utilities._Scraping_utilities__extract_content(
+                                        post_content
+                                )
                         )  # extract content out of it
                     # if element have attribute of target="_blank"
                     elif element.get_attribute("target"):
@@ -294,7 +294,7 @@ class Finder:
                         # if content have attribute target="_blank" it indicates that text will open in new tab,
                         # so make a seperate request and get that text
                         content = Finder._Finder__fetch_post_passage(
-                            element.get_attribute("href")
+                                element.get_attribute("href")
                         )
                     else:
                         content = post_content.get_attribute("textContent")
@@ -303,30 +303,30 @@ class Finder:
                     content = post_content.get_attribute("textContent")
             elif layout == "new":
                 post_content = post.find_element(
-                    By.CSS_SELECTOR, '[data-ad-preview="message"]'
+                        By.CSS_SELECTOR, '[data-ad-preview="message"]'
                 )
                 # if "See More" button exists
                 if Finder._Finder__element_exists(
-                    post_content, 'div[dir="auto"] > div[role]'
+                        post_content, 'div[dir="auto"] > div[role]'
                 ):
                     element = post_content.find_element(
-                        By.CSS_SELECTOR, 'div[dir="auto"] > div[role]'
+                            By.CSS_SELECTOR, 'div[dir="auto"] > div[role]'
                     )  # grab that element
                     if element.get_attribute("target"):
                         content = Finder._Finder__fetch_post_passage(
-                            element.get_attribute("href")
+                                element.get_attribute("href")
                         )
                     else:
                         Utilities._Utilities__click_see_more(
-                            driver, post_content, 'div[dir="auto"] > div[role]'
+                                driver, post_content, 'div[dir="auto"] > div[role]'
                         )
                         content = post_content.get_attribute(
-                            "innerText"
+                                "innerText"
                         )  # extract content out of it
                 else:
                     # if it does not have see more, just get the text out of it
                     content = post_content.get_attribute("innerText")
-
+        
         except NoSuchElementException:
             # if [data-testid="post_message"] is not found, it means that post did not had any text,either it is image or video
             content = ""
@@ -334,7 +334,7 @@ class Finder:
             logger.exception("Error at find_content method : {}".format(ex))
             content = ""
         return content
-
+    
     @staticmethod
     def __find_posted_time(post, layout, link_element, driver, isGroup):
         """finds posted time of the facebook post using selenium's webdriver's method"""
@@ -343,7 +343,7 @@ class Finder:
             # posted_time = post.find_element_by_css_selector("abbr._5ptz").get_attribute("data-utime")
             if layout == "old":
                 posted_time = post.find_element(By.TAG_NAME, "abbr").get_attribute(
-                    "data-utime"
+                        "data-utime"
                 )
                 return datetime.datetime.fromtimestamp(float(posted_time)).isoformat()
             elif layout == "new":
@@ -351,7 +351,7 @@ class Finder:
                     # NOTE There is no aria_label on these link elements anymore
                     # Facebook uses a shadowDOM element to hide timestamp, which is tricky to extract
                     # An unsuccesful attempt to extract time from nested shadowDOMs is below
-
+                    
                     js_script = """
                         // Starting from the provided element, find the SVG using querySelector
                         var svgElement = arguments[0].querySelector('svg');
@@ -390,28 +390,29 @@ class Finder:
                                         """
                     driver.execute_script(scrolling_script, link_element)
                     actions.move_to_element(link_element).perform()
-
+                    
                     parent_element = link_element.find_element_by_xpath("..")
-                    parent_element_described_by=parent_element.get_attribute("aria-describedby")
-                    tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
+                    parent_element_described_by = parent_element.get_attribute("aria-describedby")
+                    tooltipElement = driver.find_element(By.CSS_SELECTOR,
+                                                         f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
                     timestampContent = tooltipElement.get_attribute("innerText")
                     logger.debug(f"tooltipElement content : {timestampContent}")
                     timestamp = (
-                        parse(timestampContent).isoformat()
-                        if len(timestampContent) > 5
-                        else Scraping_utilities._Scraping_utilities__convert_to_iso(
-                            timestampContent
-                        )
+                            parse(timestampContent).isoformat()
+                            if len(timestampContent) > 5
+                            else Scraping_utilities._Scraping_utilities__convert_to_iso(
+                                    timestampContent
+                            )
                     )
                 return timestamp
-
+        
         except TypeError:
             timestamp = ""
         except Exception as ex:
             logger.exception("Error at find_posted_time method : {}".format(ex))
             timestamp = ""
             return timestamp
-
+    
     @staticmethod
     def __find_video_url(post):
         """finds video of the facebook post using selenium's webdriver's method"""
@@ -427,37 +428,46 @@ class Finder:
         except Exception as ex:
             video = []
             logger.exception("Error at find_video_url method : {}".format(ex))
-
+        
         return srcs
-
+    
+    @staticmethod
+    def __is_valid_image_url(url):
+        """
+        Check if the URL is a valid image URL, excluding emojis, SVGs, and data URLs.
+        """
+        base_url = url.split('?')[0]  # Get the part before '?'
+        if re.match(r"^data:image", base_url):
+            return False  # Exclude data URLs
+        if 'emoji.php' in base_url or 'rsrc.php' in base_url:
+            return False  # Exclude emoji and resource URLs
+        if re.match(r".*\.(jpg|jpeg|png|gif)$", base_url, re.IGNORECASE):
+            return True  # Include common image file extensions
+        return False
+    
     @staticmethod
     def __find_image_url(post, layout):
-        """finds all image of the facebook post using selenium's webdriver's method"""
+        """Finds all images of the Facebook post using Selenium's WebDriver's method."""
         try:
             if layout == "old":
-                # find all img tag that looks like <img class="scaledImageFitWidth img" src=""> div > img[referrerpolicy]
-                images = post.find_elements(
-                    By.CSS_SELECTOR, "img.scaledImageFitWidth.img"
-                )
-                # extract src attribute from all the img tag,store it in list
+                # For the old layout, find images using known class names
+                images = post.find_elements(By.CSS_SELECTOR, "img.scaledImageFitWidth.img")
             elif layout == "new":
-                images = post.find_elements(
-                    By.CSS_SELECTOR, "div > img[referrerpolicy]"
-                )
-            sources = (
-                [image.get_attribute("src") for image in images]
-                if len(images) > 0
-                else []
-            )
+                # For the new layout, search for image elements with various classes and attributes
+                images = post.find_elements(By.CSS_SELECTOR,
+                                            "div img[referrerpolicy], img[src], img[class*='img'], img[class*='scaledImageFitWidth']")
+            
+            sources = [image.get_attribute("src") for image in images if image.get_attribute("src")] if images else []
+            # Filter out invalid image URLs
+            valid_sources = [src for src in sources if Finder.__is_valid_image_url(src)]
         except NoSuchElementException:
-            sources = []
-            pass
+            valid_sources = []
         except Exception as ex:
-            logger.exception("Error at find_image_url method : {}".format(ex))
-            sources = []
-
-        return sources
-
+            logger.exception("Error at find_image_url method: {}".format(ex))
+            valid_sources = []
+        
+        return valid_sources
+    
     @staticmethod
     def __find_post_id(post, layout):
         """finds all image of the facebook post using selenium's webdriver's method"""
@@ -465,14 +475,14 @@ class Finder:
             if layout == "old":
                 # find all img tag that looks like <img class="scaledImageFitWidth img" src=""> div > img[referrerpolicy]
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "img.scaledImageFitWidth.img"
+                        By.CSS_SELECTOR, "img.scaledImageFitWidth.img"
                 )
                 # extract src attribute from all the img tag,store it in list
             elif layout == "new":
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "a[href*='/photo/']"
+                        By.CSS_SELECTOR, "a[href*='/photo/']"
                 )
-                if(len(images) > 0):
+                if (len(images) > 0):
                     url = images[0].get_attribute("href")
                     return Finder.__get_post_id(url)
                 else:
@@ -483,9 +493,9 @@ class Finder:
         except Exception as ex:
             logger.exception("Error at find_image_url method : {}".format(ex))
             sources = None
-
+        
         return sources
-
+    
     @staticmethod
     def __get_post_id(url):
         if '/events' in url:
@@ -501,69 +511,69 @@ class Finder:
                 post_id = post_id.split('.')[1]
             else:
                 post_id = query_params.get('fbid', [None])[0]
-
+            
             return post_id
-
+        
         return None
-
-
-
+    
     @staticmethod
     def __find_all_image_url(post, layout, driver):
-        """finds all image of the facebook post using selenium's webdriver's method"""
+        """finds all images of the Facebook post using selenium's webdriver's method"""
         post_id = None
+        sources = []
         try:
             if layout == "old":
-                # find all img tag that looks like <img class="scaledImageFitWidth img" src=""> div > img[referrerpolicy]
+                # find all img tags with specific classes
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "img.scaledImageFitWidth.img"
+                        By.CSS_SELECTOR, "img.scaledImageFitWidth.img"
                 )
-                # extract src attribute from all the img tag,store it in list
             elif layout == "new":
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "div > img[referrerpolicy]"
+                        By.CSS_SELECTOR, "div > img[referrerpolicy]"
                 )
-
-                # will open the fb carousel and get all the images
+                
+                # Open the FB carousel and get all the images
                 driver.set_window_size(1920, 1200)
-
+                
                 photo_viewer_xpath = '//div[@aria-label="Photo Viewer"]'
-
-                # will try to close the carousel if it's open TODO be sure this does work
+                
+                # Try to close the carousel if it's open
                 try:
                     carousel = driver.find_element(By.XPATH, photo_viewer_xpath)
                     carousel_close_button = carousel.find_element(By.XPATH, '//div[@aria-label="Close"]')
-                    carousel_close_button = carousel_close_button.find_element(By.XPATH, './ancestor::div[@role="banner"]/*[1]')
+                    carousel_close_button = carousel_close_button.find_element(By.XPATH,
+                                                                               './ancestor::div[@role="banner"]/*[1]')
                     ActionChains(driver).move_to_element_with_offset(carousel_close_button, 0, 0).click().perform()
                     time.sleep(3)
                 except Exception as exception:
                     logger.debug("carousel open not found")
                     logger.debug(exception)
-
+                
                 try:
                     parent_element = images[-1].find_element(By.XPATH,
-                                                               './ancestor::a[contains(@href, "/photo")]')
+                                                             './ancestor::a[contains(@href, "/photo")]')
                     last_image_count = parent_element.find_element(By.XPATH,
-                                                               "..//div[contains(text(), '+')]")
+                                                                   "..//div[contains(text(), '+')]")
                     max_images_count = len(images) + int(last_image_count.text.strip("+"))
                     logger.debug(f"image count is {max_images_count}")
                 except Exception as exce:
                     max_images_count = len(images)
                     logger.debug(exce)
-                first_url_element = images[0].find_element_by_xpath('./ancestor::a')
-
+                
+                first_url_element = images[0].find_element(By.XPATH, './ancestor::a')
+                
                 if '/photo' not in first_url_element.get_attribute('href'):
-                    # the post has no photos, could be an event
+                    # The post has no photos, could be an event
                     logger.debug("post doesn't have extra images")
                     return {
-                        'post_id': Finder.__get_post_id(first_url_element.get_attribute('href')),
-                        'images': [image.get_attribute('src') for image in images],
-                        'error': f"post doesn't have extra images : {first_url_element.get_attribute('href')}"
+                            'post_id': Finder.__get_post_id(first_url_element.get_attribute('href')),
+                            'images':  [image.get_attribute('src') for image in images],
+                            'error':   f"post doesn't have extra images : {first_url_element.get_attribute('href')}"
                     }
-
+                
                 try:
-                    # wait for a second to have the photo viewer render
-                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element));
+                    # Wait for a second to have the photo viewer render
+                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element))
                     driver.execute_script("arguments[0].scrollIntoView();", first_url_element)
                     ActionChains(driver).move_to_element_with_offset(first_url_element, 0, 0).click().perform()
                 except Exception as error:
@@ -571,40 +581,42 @@ class Finder:
                     logger.debug(first_url_element.get_attribute('href'))
                     logger.debug(traceback.format_exc())
                     return {
-                        'images': [image.get_attribute('src') for image in images],
-                        'post_id': Finder.__get_post_id(first_url_element.get_attribute('href')),
-                        'error': traceback.format_exc()
+                            'images':  [image.get_attribute('src') for image in images],
+                            'post_id': Finder.__get_post_id(first_url_element.get_attribute('href')),
+                            'error':   traceback.format_exc()
                     }
-
-                image_carousel_wrapper = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//div[@aria-label="Photo Viewer"]')))
+                
+                image_carousel_wrapper = WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.XPATH, '//div[@aria-label="Photo Viewer"]')))
                 next_button = image_carousel_wrapper.find_element(
-                    By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
+                        By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
                 )
-
+                
                 if image_carousel_wrapper:
                     if post_id is None:
                         post_id = Finder.__get_post_id(driver.current_url)
-
+                
                 def is_image_loaded(driver, img_element):
                     return driver.execute_script(
-                        "return arguments[0].complete && typeof arguments[0].naturalWidth != 'undefined' && arguments[0].naturalWidth > 0",
-                        img_element)
+                            "return arguments[0].complete && typeof arguments[0].naturalWidth != 'undefined' && arguments[0].naturalWidth > 0",
+                            img_element)
+                
                 image_src = []
-
+                
                 while (next_button is not None) & (len(image_src) < max_images_count):
                     try:
                         logger.debug("waiting for the image to render")
                         time.sleep(2)
                         try:
                             image = image_carousel_wrapper.find_element(
-                                By.XPATH, '//img[@data-visualcompletion]',
+                                    By.XPATH, '//img[@data-visualcompletion]',
                             )
                         except:
                             time.sleep(10)
                             image = image_carousel_wrapper.find_element(
-                                By.XPATH, '//img[@data-visualcompletion]',
+                                    By.XPATH, '//img[@data-visualcompletion]',
                             )
-
+                        
                         if image.get_attribute('src') in image_src:
                             next_button = None
                             break
@@ -613,87 +625,113 @@ class Finder:
                         image_src.append(image.get_attribute('src'))
                         logger.debug(f"image url : {image.get_attribute('src')}")
                         carousel_buttons = image_carousel_wrapper.find_elements(
-                            By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
+                                By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
                         )
                         if (len(carousel_buttons) > 1):
                             next_button = carousel_buttons[1]
                             ActionChains(driver).move_to_element(next_button).click().perform()
                             WebDriverWait(driver, 30).until(
-                                EC.presence_of_element_located((By.XPATH, '//img[@data-visualcompletion]')))
+                                    EC.presence_of_element_located((By.XPATH, '//img[@data-visualcompletion]')))
                         else:
                             next_button = None
                     except Exception as exp:
                         logger.debug(exp)
                         return {
-                            'images': [image.get_attribute("src") for image in images] if len(images) > 0 else [],
-                            'post_id': post_id
+                                'images':  [image.get_attribute("src") for image in images] if len(images) > 0 else [],
+                                'post_id': post_id
                         }
                 return {
-                    'images': image_src,
-                    'post_id': post_id
+                        'images':  image_src,
+                        'post_id': post_id
                 }
-
-
+        
+        
         except NoSuchElementException:
             sources = []
             pass
         except Exception as ex:
             logger.exception("Error at find_image_url method : {}".format(ex))
             sources = []
-
+        
         return {
-            'images': sources,
-            'post_id': post_id
+                'images':  sources,
+                'post_id': post_id
         }
-
+    
     @staticmethod
     def __find_all_posts(driver, layout, isGroup):
-        """finds all posts of the facebook page using selenium's webdriver's method"""
+        """Finds all posts of the Facebook page using Selenium's WebDriver's method"""
         try:
-            # find all posts that looks like <div class="userContentWrapper"> </div>
-            if layout == "old":
-                all_posts = driver.find_elements(
-                    By.CSS_SELECTOR, "div.userContentWrapper"
-                )
-            elif layout == "new":
-                # all_posts = driver.find_elements(By.CSS_SELECTOR, "div[role='feed'] > div")
-                # different query selectors depending on if we are scraping a FB page or group
-                # old selector div[role="article"]
-                all_posts = driver.find_elements(By.CSS_SELECTOR, "div[role='feed'] > div" if isGroup else 'div[data-virtualized]')
+            all_posts = []
+            last_height = driver.execute_script("return document.body.scrollHeight")
+            while True:
+                if layout == "old":
+                    new_posts = driver.find_elements(By.CSS_SELECTOR, "div.userContentWrapper")
+                elif layout == "new":
+                    if isGroup:
+                        new_posts = driver.find_elements(By.CSS_SELECTOR, "div[role='feed'] > div")
+                    else:
+                        new_posts = driver.find_elements(By.CSS_SELECTOR, "div[role='article']")
+                    
+                    # Update the selector for new layout
+                    new_posts = driver.find_elements(By.CSS_SELECTOR, "div.x1yztbdb.x1n2onr6.xh8yej3.x1ja2u2z")
+                
+                all_posts.extend(new_posts)
+                all_posts = list(set(all_posts))  # Remove duplicates
+                
+                # Scroll to the bottom of the page to load more posts
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(2)  # Adjust sleep time as needed
+                
+                new_height = driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break  # Exit if no new posts are loaded
+                last_height = new_height
+            
             return all_posts
         except NoSuchElementException:
             logger.error("Cannot find any posts! Exiting!")
-            # if this fails to find posts that means, code cannot move forward, as no post is found
             Utilities.__close_driver(driver)
             sys.exit(1)
         except Exception as ex:
             logger.exception("Error at find_all_posts method : {}".format(ex))
             Utilities.__close_driver(driver)
             sys.exit(1)
-
+    
     @staticmethod
     def __find_name(driverOrPost, layout):
         """finds name of the facebook page or post using selenium's webdriver's method"""
         # Attempt to print the outer HTML of the driverOrPost for debugging
-
+        
         try:
             if layout == "old":
                 name = driverOrPost.find_element(By.CSS_SELECTOR, "a._64-f")
             elif layout == "new":
-                name = driverOrPost.find_element(By.TAG_NAME, "strong")
+                try:
+                    # Try to find the name in an h1 element
+                    name_element = driverOrPost.find_element(By.CSS_SELECTOR,
+                                                             "div.x78zum5 div.x1e56ztr span.x193iq5w h1.html-h1")
+                except NoSuchElementException:
+                    # If not found, fallback to find the name in an h2 element (if needed for other cases)
+                    name_element = driverOrPost.find_element(By.CSS_SELECTOR, "div.x1e56ztr h2.html-h2 span span")
+            
             url = None
-            if name is not None:
-                url_elem = name.find_element(By.XPATH, "./ancestor::a")
-                url = url_elem.get_attribute('href')
+            if name_element is not None:
+                # Attempt to find the ancestor link element
+                try:
+                    url_elem = name_element.find_element(By.XPATH, "./ancestor::a")
+                    url = url_elem.get_attribute('href')
+                except NoSuchElementException:
+                    url = None  # URL not found
+            
             return {
-                'name' : name.get_attribute(
-                    "textContent"
-                ),
-                'url': url
+                    'name': name_element.get_attribute("textContent") if name_element else '',
+                    'url':  url
             }
         except Exception as ex:
-            logger.exception("Error at __find_name method : {}".format(ex))
-
+            logger.exception("Error at __find_name method: {}".format(ex))
+            return {'name': '', 'url': None}
+    
     @staticmethod
     def __detect_ui(driver):
         try:
@@ -705,7 +743,7 @@ class Finder:
             logger.exception("Error art __detect_ui: {}".format(ex))
             Utilities.__close_driver(driver)
             sys.exit(1)
-
+    
     @staticmethod
     def __find_reaction(layout, reactions_all):
         try:
@@ -713,52 +751,64 @@ class Finder:
                 return reactions_all.find_elements(By.TAG_NAME, "a")
             elif layout == "new":
                 return reactions_all.find_elements(By.TAG_NAME, "div")
-
+        
         except Exception as ex:
             logger.exception("Error at find_reaction : {}".format(ex))
             return ""
-
+    
     @staticmethod
     def __accept_cookies(driver):
         try:
-            button = driver.find_elements(
-                By.CSS_SELECTOR, '[aria-label="Allow essential and optional cookies"]'
-            )
-            button[-1].click()
-        except (NoSuchElementException, IndexError):
-            pass
+            # Use JavaScript to find the button containing the exact text "Allow all cookies"
+            buttons = driver.execute_script("""
+                return Array.from(document.querySelectorAll('div[role="button"] span'))
+                            .filter(span => span.textContent.trim() === 'Allow all cookies');
+            """)
+            
+            # Check if any elements were found
+            if buttons:
+                ActionChains(driver).move_to_element(buttons[0]).click().perform()  # Click the first one found
+            else:
+                logger.info("No 'Allow all cookies' button found.")
+        except NoSuchElementException:
+            logger.info("No such element exception occurred.")
+        except IndexError:
+            logger.info("Index error occurred.")
         except Exception as ex:
             logger.exception("Error at accept_cookies: {}".format(ex))
             sys.exit(1)
-
+    
     @staticmethod
     def __login(driver, username, password):
         try:
-
+            
             wait = WebDriverWait(driver, 4)  # considering that the elements might load a bit slow
-
+            
             # NOTE this closes the login modal pop-up if you choose to not login above
             try:
                 element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[aria-label="Close"]')))
                 element.click()  # Click the element
             except Exception as ex:
                 logger.debug(f"no pop-up")
-
+            
             time.sleep(1)
-            #target username
-            username_element = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='email']")))
-            password_element = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='pass']")))
-
-            #enter username and password
+            # target username
+            username_element = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='email']")))
+            password_element = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='pass']")))
+            
+            # enter username and password
             username_element.clear()
             username_element.send_keys(str(username))
             password_element.clear()
             password_element.send_keys(str(password))
-
-            #target the login button and click it
+            
+            # target the login button and click it
             try:
                 # Try to click the first button of type 'submit'
-                WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))).click()
+                WebDriverWait(driver, 2).until(EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "div[role='button'][aria-label='Accessible login button']"))).click()
             except TimeoutException:
                 # If the button of type 'submit' is not found within 2 seconds, click the first 'button' found
                 WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button"))).click()
