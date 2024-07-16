@@ -576,7 +576,7 @@ class Finder:
 
                 try:
                     # wait for a second to have the photo viewer render
-                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element));
+                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element))
                     driver.execute_script("arguments[0].scrollIntoView();", first_url_element)
                     ActionChains(driver).move_to_element_with_offset(first_url_element, 0, 0).click().perform()
                 except Exception as error:
@@ -738,8 +738,24 @@ class Finder:
                 By.CSS_SELECTOR, '[aria-label="Allow essential and optional cookies"]'
             )
             button[-1].click()
-        except (NoSuchElementException, IndexError):
-            pass
+        except NoSuchElementException:
+            try:
+                # Use JavaScript to find the button containing the exact text "Allow all cookies"
+                buttons = driver.execute_script("""
+                    return Array.from(document.querySelectorAll('div[role="button"] span'))
+                                .filter(span => span.textContent.trim() === 'Allow all cookies');
+                """)
+                
+                # Check if any elements were found
+                if buttons:
+                    ActionChains(driver).move_to_element(buttons[0]).click().perform()  # Click the first one found
+                else:
+                    logger.info("No 'Allow all cookies' button found.")
+            except NoSuchElementException:
+                logger.info("No such element exception occurred.")
+                pass
+        except IndexError:
+            logger.info("Index error occurred.")
         except Exception as ex:
             logger.exception("Error at accept_cookies: {}".format(ex))
             sys.exit(1)
