@@ -166,8 +166,6 @@ class Finder:
             status = "NA"
         return (status, status_link, link)
 
-
-
     @staticmethod
     def __find_share(post, layout):
         """finds shares count of the facebook post using selenium's webdriver's method"""
@@ -378,24 +376,28 @@ class Finder:
                     timestamp = driver.execute_script(js_script, link_element)
                     logger.debug("TIMESTAMP: " + str(timestamp))
                 elif not isGroup:
-                    # getting the timestamp from teh tooltip after hovering the link
-                    logger.debug("getting timestamp from hovering tooltip")
-                    actions = ActionChains(driver)
-                    scrolling_script = """
+                    try:
+                        # getting the timestamp from teh tooltip after hovering the link
+                        logger.debug("getting timestamp from hovering tooltip")
+                        actions = ActionChains(driver)
+                        scrolling_script = """
                                             const element = arguments[0];
                                             const elementRect = element.getBoundingClientRect();
                                             const absoluteElementTop = elementRect.top + window.pageYOffset;
                                             const middle = absoluteElementTop - (window.innerHeight / 2);
                                             window.scrollTo(0, middle);
-                                        """
-                    driver.execute_script(scrolling_script, link_element)
-                    actions.move_to_element(link_element).perform()
-
-                    parent_element = link_element.find_element_by_xpath("..")
-                    parent_element_described_by=parent_element.get_attribute("aria-describedby")
-                    tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
-                    timestampContent = tooltipElement.get_attribute("innerText")
-                    logger.debug(f"tooltipElement content : {timestampContent}")
+                                            """
+                        driver.execute_script(scrolling_script, link_element)
+                        actions.move_to_element(link_element).perform()
+    
+                        parent_element = link_element.find_element_by_xpath("..")
+                        parent_element_described_by=parent_element.get_attribute("aria-describedby")
+                        tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
+                        timestampContent = tooltipElement.get_attribute("innerText")
+                        logger.debug(f"tooltipElement content : {timestampContent}")
+                    except AttributeError as ex:
+                        timestampContent = link_element.get_attribute("aria-label")
+    
                     timestamp = (
                         parse(timestampContent).isoformat()
                         if len(timestampContent) > 5
@@ -420,7 +422,8 @@ class Finder:
             video_element = post.find_elements(By.TAG_NAME, "video")
             srcs = []
             for video in video_element:
-                srcs.append(video.get_attribute("src"))
+                video_url = video.get_attribute("src")
+                srcs.append(video_url.replace("blob:", ""))
         except NoSuchElementException:
             video = []
             pass
@@ -517,8 +520,6 @@ class Finder:
             return post_id
 
         return None
-
-
 
     @staticmethod
     def __find_all_image_url(post, layout, driver):
