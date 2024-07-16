@@ -390,7 +390,7 @@ class Finder:
                         driver.execute_script(scrolling_script, link_element)
                         actions.move_to_element(link_element).perform()
     
-                        parent_element = link_element.find_element_by_xpath("..")
+                        parent_element = link_element.find_element(By.XPATH, "..")
                         parent_element_described_by=parent_element.get_attribute("aria-describedby")
                         tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
                         timestampContent = tooltipElement.get_attribute("innerText")
@@ -563,7 +563,7 @@ class Finder:
                 except Exception as exce:
                     max_images_count = len(images)
                     logger.debug(exce)
-                first_url_element = images[0].find_element_by_xpath('./ancestor::a')
+                first_url_element = images[0].find_element(By.XPATH, './ancestor::a')
 
                 if '/photo' not in first_url_element.get_attribute('href'):
                     # the post has no photos, could be an event
