@@ -431,6 +431,20 @@ class Finder:
         return srcs
 
     @staticmethod
+    def __is_valid_image_url(url):
+        """
+        Check if the URL is a valid image URL, excluding emojis, SVGs, and data URLs.
+        """
+        base_url = url.split('?')[0]  # Get the part before '?'
+        if re.match(r"^data:image", base_url):
+            return False  # Exclude data URLs
+        if 'emoji.php' in base_url or 'rsrc.php' in base_url:
+            return False  # Exclude emoji and resource URLs
+        if re.match(r".*\.(jpg|jpeg|png|gif)$", base_url, re.IGNORECASE):
+            return True  # Include common image file extensions
+        return False
+
+    @staticmethod
     def __find_image_url(post, layout):
         """finds all image of the facebook post using selenium's webdriver's method"""
         try:
@@ -442,21 +456,19 @@ class Finder:
                 # extract src attribute from all the img tag,store it in list
             elif layout == "new":
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "div > img[referrerpolicy]"
+                    By.CSS_SELECTOR, "div img[referrerpolicy], img[src], img[class*='img'], img[class*='scaledImageFitWidth']"
                 )
-            sources = (
-                [image.get_attribute("src") for image in images]
-                if len(images) > 0
-                else []
-            )
+            sources = [image.get_attribute("src") for image in images if image.get_attribute("src")] if images else []
+            # Filter out invalid image URLs
+            valid_sources = [src for src in sources if Finder.__is_valid_image_url(src)]
         except NoSuchElementException:
-            sources = []
+            valid_sources = []
             pass
         except Exception as ex:
             logger.exception("Error at find_image_url method : {}".format(ex))
-            sources = []
+            valid_sources = []
 
-        return sources
+        return valid_sources
 
     @staticmethod
     def __find_post_id(post, layout):
@@ -481,7 +493,7 @@ class Finder:
             sources = None
             pass
         except Exception as ex:
-            logger.exception("Error at find_image_url method : {}".format(ex))
+            logger.exception("Error at find_post_id method : {}".format(ex))
             sources = None
 
         return sources
@@ -638,7 +650,7 @@ class Finder:
             sources = []
             pass
         except Exception as ex:
-            logger.exception("Error at find_image_url method : {}".format(ex))
+            logger.exception("Error at find_all_image_url method : {}".format(ex))
             sources = []
 
         return {

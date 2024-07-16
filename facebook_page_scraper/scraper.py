@@ -334,6 +334,8 @@ class Facebook_scraper:
                     video = Finder._Finder__find_video_url(post)
                 
                 image = Finder._Finder__find_all_image_url(post, self.__layout, self.__driver)
+                if ('images' not in image) or (len(image['images']) == 0):
+                    image['images'] = Finder._Finder__find_image_url(post, self.__layout)
                 
                 # post_url = "https://www.facebook.com/{}/posts/{}".format(self.page_or_group_name,status)
                 
