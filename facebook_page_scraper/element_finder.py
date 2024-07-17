@@ -376,37 +376,36 @@ class Finder:
                     timestamp = driver.execute_script(js_script, link_element)
                     logger.debug("TIMESTAMP: " + str(timestamp))
                 elif not isGroup:
-                    try:
-                        # getting the timestamp from teh tooltip after hovering the link
-                        logger.debug("getting timestamp from hovering tooltip")
-                        actions = ActionChains(driver)
-                        scrolling_script = """
-                                            const element = arguments[0];
-                                            const elementRect = element.getBoundingClientRect();
-                                            const absoluteElementTop = elementRect.top + window.pageYOffset;
-                                            const middle = absoluteElementTop - (window.innerHeight / 2);
-                                            window.scrollTo(0, middle);
-                                            """
-                        driver.execute_script(scrolling_script, link_element)
-                        actions.move_to_element(link_element).perform()
-    
-                        parent_element = link_element.find_element(By.XPATH, "..")
-                        parent_element_described_by=parent_element.get_attribute("aria-describedby")
+                    # getting the timestamp from teh tooltip after hovering the link
+                    logger.debug("getting timestamp from hovering tooltip")
+                    actions = ActionChains(driver)
+                    scrolling_script = """
+                                        const element = arguments[0];
+                                        const elementRect = element.getBoundingClientRect();
+                                        const absoluteElementTop = elementRect.top + window.pageYOffset;
+                                        const middle = absoluteElementTop - (window.innerHeight / 2);
+                                        window.scrollTo(0, middle);
+                                        """
+                    driver.execute_script(scrolling_script, link_element)
+                    actions.move_to_element(link_element).perform()
+
+                    parent_element = link_element.find_element(By.XPATH, "..")
+                    parent_element_described_by=parent_element.get_attribute("aria-describedby")
+                    if parent_element_described_by:
                         tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
                         timestampContent = tooltipElement.get_attribute("innerText")
                         logger.debug(f"tooltipElement content : {timestampContent}")
-                    except AttributeError as ex:
-                        timestampContent = link_element.get_attribute("aria-label")
-    
-                    timestamp = (
-                        parse(timestampContent).isoformat()
-                        if len(timestampContent) > 5
-                        else Scraping_utilities._Scraping_utilities__convert_to_iso(
-                            timestampContent
-                        )
-                    )
-                return timestamp
 
+                        timestamp = (
+                            parse(timestampContent).isoformat()
+                            if len(timestampContent) > 5
+                            else Scraping_utilities._Scraping_utilities__convert_to_iso(
+                                timestampContent
+                            )
+                        )
+                    else:
+                        timestamp = ""
+                return timestamp
         except TypeError:
             timestamp = ""
         except Exception as ex:

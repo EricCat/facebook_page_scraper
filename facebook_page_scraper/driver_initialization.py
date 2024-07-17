@@ -16,6 +16,11 @@ ch = logging.StreamHandler()
 ch.setFormatter(format)
 logger.addHandler(ch)
 
+logging.getLogger().setLevel(logging.INFO)
+
+logging.getLogger("selenium").setLevel(logging.WARNING)
+logging.getLogger("hpack").setLevel(logging.WARNING)
+logging.getLogger("hpack.hpack").setLevel(logging.WARNING)
 
 class Initializer:
 
@@ -67,7 +72,7 @@ class Initializer:
                     'no_proxy': 'localhost, 127.0.0.1'
                 }
                 logger.info("Using: {}".format(self.proxy))
-                return webdriver.Firefox(executable_path=GeckoDriverManager().install(),
+                return webdriver.Firefox(executable_path=GeckoDriverManager(**driver_install_config).install(),
                                          options=self.set_properties(browser_option), seleniumwire_options=options)
 
             # automatically installs geckodriver and initialize it and returns the instance
