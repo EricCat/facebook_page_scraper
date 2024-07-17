@@ -42,13 +42,14 @@ class Facebook_scraper:
     # on each iteration __close_after_retry is called to check if retry have turned to 0
     # if it returns true,it will break the loop. After coming out of loop,driver will be closed and it will return post whatever was found
     
-    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None,
+    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None, browser_path=None,
                  timeout=600, headless=True, isGroup=False, username=None, password=None, driver_install_config=None):
         self.page_or_group_name = page_or_group_name
         self.posts_count = int(posts_count)
         # self.URL = "https://en-gb.facebook.com/pg/{}/posts".format(self.page_or_group_name)
         self.URL = "https://facebook.com/{}".format(self.page_or_group_name)
         self.browser = browser
+        self.browser_path = browser_path
         self.__driver = ''
         self.proxy = proxy
         self.__layout = ''
@@ -65,7 +66,7 @@ class Facebook_scraper:
     def __start_driver(self):
         """changes the class member __driver value to driver on call"""
         self.__driver = Initializer(
-                self.browser, self.proxy, self.headless).init(self.driver_install_config)
+                self.browser, self.proxy, self.headless, self.browser_path).init(self.driver_install_config)
     
     def __handle_popup(self, layout):
         # while scrolling, wait for login popup to show, it can be skipped by clicking "Not Now" button

@@ -24,10 +24,11 @@ logging.getLogger("hpack").setLevel(logging.WARNING)
 
 class Initializer:
 
-    def __init__(self, browser_name, proxy=None, headless=True):
+    def __init__(self, browser_name, proxy=None, headless=True, browser_path=None):
         self.browser_name = browser_name
         self.proxy = proxy
         self.headless = headless
+        self.browser_path = browser_path
 
     def set_properties(self, browser_option):
         """adds capabilities to the driver"""
@@ -51,6 +52,8 @@ class Initializer:
         # if browser is suppose to be chrome
         if browser_name.lower() == "chrome":
             browser_option = ChromeOptions()
+            if self.browser_path is not None:
+                browser_option.binary_location = self.browser_path
             # automatically installs chromedriver and initialize it and returns the instance
             if self.proxy is not None:
                 options = {
@@ -65,6 +68,9 @@ class Initializer:
             return webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=self.set_properties(browser_option))
         elif browser_name.lower() == "firefox":
             browser_option = FirefoxOptions()
+            if self.browser_path is not None:
+                browser_option.binary_location = self.browser_path
+
             if self.proxy is not None:
                 options = {
                     'https': 'https://{}'.format(self.proxy.replace(" ", "")),
