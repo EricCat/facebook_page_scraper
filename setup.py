@@ -7,7 +7,9 @@ requirements = ['selenium==4.1.0',
                 'webdriver-manager==3.2.2',
                 'selenium-wire==5.1.0',
                 'python-dateutil==2.8.2',
-                'ciso8601==2.3.1']
+                'ciso8601==2.3.1',
+                'blinker==1.7.0',
+                ]
 
 
 setuptools.setup(
