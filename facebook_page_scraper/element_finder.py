@@ -640,6 +640,12 @@ class Finder:
                             'images': [image.get_attribute("src") for image in images] if len(images) > 0 else [],
                             'post_id': post_id
                         }
+
+                # closing the photo carousel to force next posts to render
+                carousel_closing_button = image_carousel_wrapper.find_element(By.XPATH,
+                                                                              '//i[@data-visualcompletion="css-img"]')
+                ActionChains(driver).move_to_element(carousel_closing_button).click().perform()
+
                 return {
                     'images': image_src,
                     'post_id': post_id
