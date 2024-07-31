@@ -105,7 +105,7 @@ class Finder:
                         window.scrollTo(0, middle);
                     """
                     driver.execute_script(scrolling_script, link)
-                    driver.execute_script("arguments[0].style.border='2px solid black'", link);
+                    driver.execute_script("arguments[0].style.border='2px solid black'", link)
                     actions.move_to_element(link).perform()
                     time.sleep(2)
 

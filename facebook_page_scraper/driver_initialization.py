@@ -16,7 +16,7 @@ ch = logging.StreamHandler()
 ch.setFormatter(format)
 logger.addHandler(ch)
 
-logging.getLogger().setLevel(logging.INFO)
+# logging.getLogger().setLevel(logging.INFO)
 
 logging.getLogger("selenium").setLevel(logging.WARNING)
 logging.getLogger("seleniumwire").setLevel(logging.WARNING)
