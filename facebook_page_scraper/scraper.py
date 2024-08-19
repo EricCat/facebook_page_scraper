@@ -234,7 +234,7 @@ class Facebook_scraper:
                 
                 # finds name depending on if this facebook site is a page or group (we pass a post obj or a webDriver)
                 name = Finder._Finder__find_name(
-                        post if self.isGroup else self.__driver,
+                        post,
                         self.__layout)  # find name element for page or for each post if this is used for group pages
                 
                 post_content = Finder._Finder__find_content(
