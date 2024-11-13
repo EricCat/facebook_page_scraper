@@ -35,6 +35,10 @@ class Initializer:
         if self.headless:
             browser_option.add_argument(
                 '--headless')  # runs browser in headless mode
+        else:
+            if self.browser_name.lower() == "firefox":
+                browser_option.add_argument("-devtools")
+
         browser_option.add_argument('--no-sandbox')
         browser_option.add_argument("--disable-dev-shm-usage")
         browser_option.add_argument('--ignore-certificate-errors')

@@ -52,6 +52,33 @@ class Utilities:
             # if any other error occured except the above one
             logger.exception(
                 "Error at close_error_popup method : {}".format(ex))
+    
+    @staticmethod
+    def __close_force_login_popup(driver):
+        '''expects driver's instance as a argument and checks if force login popup shows up
+        without the close button present, it will then delete it from the DOM and proceed with the rest.'''
+        try:
+            logger.debug("will try to find the force login popup")
+            signup_form_cta = driver.find_element(By.CSS_SELECTOR, '#login_popup_cta_form')
+            logger.debug("signup_form_cta found, will look for the parent box")
+            popup_element = signup_form_cta.find_element(By.XPATH,
+                                                         './ancestor::div[contains(@class, "_fb-light-mode")]')
+            logger.debug("force login popup found, will proceed with deletion")
+            driver.execute_script("arguments[0].parentNode.removeChild(arguments[0]);", popup_element)
+            logger.info("force login popup deleted")
+        
+        except NoSuchElementException as err:
+            logger.info("force login popup not found, proceeding with usual flow")
+            pass  # passing this error silently because it may happen that popup never shows up
+        except WebDriverException as driverError:
+            logger.error("force login popup error")
+            logger.error(driverError)
+            # it is possible that even after waiting for given amount of time,modal may not appear
+            pass
+        except Exception as ex:
+            # if any other error occured except the above one
+            logger.exception(
+                    "Error at __close_force_login_popup method : {}".format(ex))
 
     @staticmethod
     def __scroll_down_half(driver):
