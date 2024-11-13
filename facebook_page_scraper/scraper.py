@@ -220,6 +220,7 @@ class Facebook_scraper:
             self.infinite_loop_counter +=1
 
         if self.infinite_loop_counter >= 5:
+            logger.info(f"Infinite loop counter reached : {self.infinite_loop_counter}, breaking loop")
             self.infinite_loop_counter = 0
             return True
 
