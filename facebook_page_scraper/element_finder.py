@@ -84,11 +84,10 @@ class Finder:
             elif layout == "new":
 
                 try:
-                    link = post.find_element(
-                        By.CSS_SELECTOR,
-                        'span > a[role="link"]' if isGroup else 'span > a[aria-label][role="link"]'
-                    )
-
+                    link = Utilities._Utilities__find_with_multiple_selectors(post, [
+                            'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]',
+                            'span > a[attributionsrc][role="link"][href="#"]'
+                    ])
                 except NoSuchElementException:
                     # try to hover over the time link
                     link = post.find_element(
@@ -105,8 +104,10 @@ class Finder:
                         window.scrollTo(0, middle);
                     """
                     driver.execute_script(scrolling_script, link)
+                    Utilities._Utilities__close_force_login_popup(driver)
                     driver.execute_script("arguments[0].style.border='2px solid black'", link)
                     actions.move_to_element(link).perform()
+                    Utilities._Utilities__close_force_login_popup(driver)
                     time.sleep(2)
 
                     # actually not  useful to trigger the hover witht he mouse event
@@ -129,6 +130,7 @@ class Finder:
                             print("constructed post Url ")
                             print(post_url)
                             return (postId, post_url, link)
+                Utilities._Utilities__close_force_login_popup(driver)
                 if link is not None:
                     status_link = link.get_attribute("href")
                     status = Scraping_utilities._Scraping_utilities__extract_id_from_link(

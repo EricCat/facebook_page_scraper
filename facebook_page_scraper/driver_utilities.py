@@ -214,3 +214,19 @@ class Utilities:
         except Exception as ex:
             #if not found, that's fine silently just log thing do not stop
             logger.info('The Cookie Consent Prompt was not found!: ', ex)
+
+    @staticmethod
+    def __find_with_multiple_selectors(driver, selectors):
+        for selector in selectors:
+            try:
+                return driver.find_element(
+                        By.CSS_SELECTOR,
+                        selector
+                )
+            except NoSuchElementException:
+                pass
+            except Exception as ex:
+                logger.exception("Error at find_status method : {}".format(ex))
+                pass
+        raise NoSuchElementException(f"No element found! for selectors: {selectors}")
+
