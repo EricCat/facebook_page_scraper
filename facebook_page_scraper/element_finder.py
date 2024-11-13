@@ -624,6 +624,7 @@ class Finder:
                         images.append(image)
                         image_src.append(image.get_attribute('src'))
                         logger.debug(f"image url : {image.get_attribute('src')}")
+                        Utilities._Utilities__close_force_login_popup(driver)
                         carousel_buttons = image_carousel_wrapper.find_elements(
                             By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
                         )
