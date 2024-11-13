@@ -62,6 +62,8 @@ class Facebook_scraper:
         self.__data_dict = {}  # this dictionary stores all post's data
         # __extracted_post contains all the post's ID that have been scraped before and as it set() it avoids post's ID duplication.
         self.__extracted_post = set()
+        self.previous_post_length = 0
+        self.infinite_loop_counter = 0
     
     def __start_driver(self):
         """changes the class member __driver value to driver on call"""
@@ -212,7 +214,15 @@ class Facebook_scraper:
         all_posts = Finder._Finder__find_all_posts(
                 self.__driver, self.__layout, self.isGroup)  # find all posts
         print("all_posts length: " + str(len(all_posts)))
-        
+        self.previous_post_length = len(all_posts)
+        # when the length of the posts is the same for 3 iterations, it means the script is going to loop indefinitely, so we are cutting it off
+        if self.previous_post_length == len(all_posts):
+            self.infinite_loop_counter +=1
+
+        if self.infinite_loop_counter >= 5:
+            self.infinite_loop_counter = 0
+            return True
+
         # remove duplicates from the list
         all_posts = self.__remove_duplicates(
                 all_posts)
