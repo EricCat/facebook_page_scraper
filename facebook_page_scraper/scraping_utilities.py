@@ -38,7 +38,7 @@ class Scraping_utilities:
         try:
             return dt.utcfromtimestamp(float(unix_timestamp)).isoformat()
         except Exception as ex:
-            logger.exception('Error at convert_time : {}'.format(ex))
+          logger.exception('Error at convert_time : {}'.format(ex))
 
     @staticmethod
     def __extract_content(content):

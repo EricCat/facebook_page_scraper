@@ -86,17 +86,18 @@ class Finder:
                 try:
                     # try to scroll to the start of the post
                     driver.execute_script("arguments[0].scrollIntoView({ block: 'center', inline: 'center'});", post)
-        
-                    link = Utilities._Utilities__find_with_multiple_selectors(post, [
-                            'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]',
-                            'span > a[attributionsrc][role="link"][href="#"]'
-                    ])
-                except NoSuchElementException:
-                    # try to hover over the time link
+
                     link = post.find_element(
                         By.CSS_SELECTOR,
-                        'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]'
+                        'span > a[role="link"]' if isGroup else 'span > a[aria-label][role="link"]'
                     )
+
+                except NoSuchElementException:
+                    # try to hover over the time link
+                    link = Utilities._Utilities__find_with_multiple_selectors(post, [
+                        'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]',
+                        'span > a[attributionsrc][role="link"][href="#"]'
+                    ])
                     actions = ActionChains(driver)
                     # scroll to the link
                     scrolling_script = """
@@ -170,6 +171,8 @@ class Finder:
             logger.exception("Error at find_status method : {}".format(ex))
             status = "NA"
         return (status, status_link, link)
+
+
 
     @staticmethod
     def __find_share(post, layout):
@@ -463,7 +466,7 @@ class Finder:
                 # extract src attribute from all the img tag,store it in list
             elif layout == "new":
                 images = post.find_elements(
-                    By.CSS_SELECTOR, "div img[referrerpolicy], img[src], img[class*='img'], img[class*='scaledImageFitWidth']"
+                    By.CSS_SELECTOR, "div > img[referrerpolicy]"
                 )
             sources = [image.get_attribute("src") for image in images if image.get_attribute("src")] if images else []
             # Filter out invalid image URLs
@@ -500,7 +503,7 @@ class Finder:
             sources = None
             pass
         except Exception as ex:
-            logger.exception("Error at find_post_id method : {}".format(ex))
+            logger.exception("Error at __find_post_id method : {}".format(ex))
             sources = None
 
         return sources
@@ -524,6 +527,8 @@ class Finder:
             return post_id
 
         return None
+
+
 
     @staticmethod
     def __find_all_image_url(post, layout, driver):
@@ -646,12 +651,9 @@ class Finder:
                             'images': [image.get_attribute("src") for image in images] if len(images) > 0 else [],
                             'post_id': post_id
                         }
-
                 # closing the photo carousel to force next posts to render
-                carousel_closing_button = image_carousel_wrapper.find_element(By.XPATH,
-                                                                              '//i[@data-visualcompletion="css-img"]')
+                carousel_closing_button = image_carousel_wrapper.find_element(By.XPATH, '//i[@data-visualcompletion="css-img"]')
                 ActionChains(driver).move_to_element(carousel_closing_button).click().perform()
-
                 return {
                     'images': image_src,
                     'post_id': post_id
