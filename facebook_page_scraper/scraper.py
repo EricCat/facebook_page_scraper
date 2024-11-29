@@ -41,7 +41,7 @@ class Facebook_scraper:
     # on each iteration __close_after_retry is called to check if retry have turned to 0
     # if it returns true,it will break the loop. After coming out of loop,driver will be closed and it will return post whatever was found
 
-    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None,
+    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None, browser_path=None,
                  timeout=600, headless=True, isGroup=False, username=None, password=None, driver_install_config=None):
         self.page_or_group_name = page_or_group_name
         self.posts_count = int(posts_count)
