@@ -24,7 +24,7 @@ logging.getLogger("hpack").setLevel(logging.WARNING)
 
 class Initializer:
 
-    def __init__(self, browser_name, proxy=None, headless=True, browser_path=None):
+    def __init__(self, browser_name, proxy=None, headless=True, devTools=False, browser_path=None):
         self.browser_name = browser_name
         self.proxy = proxy
         self.headless = headless
