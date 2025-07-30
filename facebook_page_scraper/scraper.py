@@ -15,13 +15,14 @@ from .scraping_utilities import Scraping_utilities
 
 logger = logging.getLogger(__name__)
 format = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 ch = logging.StreamHandler()
 ch.setFormatter(format)
 logger.addHandler(ch)
 
-class Facebook_scraper:
 
+class Facebook_scraper:
+    
     # when we scroll and extract all posts,it may happens that we extract same posts over and over,so this lead to too much iteration
     # and waste time to iterate over and over the same post, to solve that,
     # problem I needed a data structure which
@@ -29,7 +30,7 @@ class Facebook_scraper:
     # 2) provides search of element,
     # 3) compatible with list's unpacking to quickly add element inside itself from list
     #  set() seems to be doing the work properly
-
+    
     # condition,
     # 1) if we reach bottom of the page and post is not longer available, and we don't meet the number of posts that we need to find
     # 2) if we were given wrong page_or_group_name, and it does not exists in fb than no post will exist.
@@ -41,14 +42,14 @@ class Facebook_scraper:
     # on each iteration __close_after_retry is called to check if retry have turned to 0
     # if it returns true,it will break the loop. After coming out of loop,driver will be closed and it will return post whatever was found
 
-    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None, browser_path=None,
-                 timeout=600, headless=True, isGroup=False, username=None, password=None, driver_install_config=None):
+    def __init__(self, page_or_group_name, posts_count=10, browser="chrome", proxy=None,
+                 timeout=600, headless=True, isGroup=False, username=None, password=None, driver_install_config=None,
+                 remoteBrowser=None,  browser_path=None,):
         self.page_or_group_name = page_or_group_name
         self.posts_count = int(posts_count)
-        #self.URL = "https://en-gb.facebook.com/pg/{}/posts".format(self.page_or_group_name)
+        # self.URL = "https://en-gb.facebook.com/pg/{}/posts".format(self.page_or_group_name)
         self.URL = "https://facebook.com/{}".format(self.page_or_group_name)
         self.browser = browser
-        self.browser_path = browser_path
         self.__driver = ''
         self.proxy = proxy
         self.__layout = ''
@@ -58,18 +59,22 @@ class Facebook_scraper:
         self.username = username
         self.password = password
         self.driver_install_config = driver_install_config
+        self.remoteBrowser = remoteBrowser
         self.__data_dict = {}  # this dictionary stores all post's data
         # __extracted_post contains all the post's ID that have been scraped before and as it set() it avoids post's ID duplication.
         self.__extracted_post = set()
         self.previous_post_length = 0
         self.infinite_loop_counter = 0
 
+        self.browser_path = browser_path
+
     def __start_driver(self):
         """changes the class member __driver value to driver on call"""
         self.__driver = Initializer(
-                self.browser, self.proxy, self.headless, self.browser_path).init(self.driver_install_config)
+                self.browser, self.proxy, self.headless, self.browser_path).init(self.driver_install_config,
+                                                                                 remoteBrowser=self.remoteBrowser)
     
-    def __handle_popup(self, layout):
+    def __handle_popup(self, layout, close_regular_signup_modal=True):
         # while scrolling, wait for login popup to show, it can be skipped by clicking "Not Now" button
         try:
             if layout == "old":
@@ -77,23 +82,26 @@ class Facebook_scraper:
                 Utilities._Utilities__close_error_popup(self.__driver)
                 Utilities._Utilities__close_popup(self.__driver)
             elif layout == "new":
-                Utilities._Utilities__close_modern_layout_signup_modal(
-                    self.__driver)
+                if close_regular_signup_modal:
+                    Utilities._Utilities__close_modern_layout_signup_modal(
+                            self.__driver)
                 Utilities._Utilities__close_cookie_consent_modern_layout(
-                    self.__driver)
-
+                        self.__driver)
+        
         except Exception as ex:
             logger.exception("Error at handle_popup : {}".format(ex))
-
+    
     def __check_timeout(self, start_time, current_time):
-        return (current_time-start_time) > self.timeout
-
-    def scrap_to_json(self, minimum_timestamp = None):
+        return (current_time - start_time) > self.timeout
+    
+    def scrap_to_json(self, minimum_timestamp=None, single_post=False):
         # call the __start_driver and override class member __driver to webdriver's instance
         self.__start_driver()
         starting_time = time.time()
         # navigate to URL
         self.__driver.get(self.URL)
+        # set window size
+        self.__driver.set_window_size(1920, 1080)
         # only login if username is provided
         self.username is not None and Finder._Finder__login(self.__driver, self.username, self.password)
         Finder._Finder__accept_cookies(self.__driver)
@@ -103,36 +111,37 @@ class Facebook_scraper:
         Utilities._Utilities__close_error_popup(self.__driver)
         # wait for post to load
         elements_have_loaded = Utilities._Utilities__wait_for_element_to_appear(
-            self.__driver, self.__layout, self.timeout)
+                self.__driver, self.__layout, self.timeout)
         # scroll down to bottom most
         Utilities._Utilities__scroll_down(self.__driver, self.__layout)
-        self.__handle_popup(self.__layout)
+        self.__handle_popup(self.__layout, close_regular_signup_modal=not single_post)
         # timestamp limitation for scraping posts
         timestamp_edge_hit = False
         while (not timestamp_edge_hit) and (len(self.__data_dict) < self.posts_count) and elements_have_loaded:
-            self.__handle_popup(self.__layout)
+            self.__handle_popup(self.__layout, close_regular_signup_modal=not single_post)
             # self.__find_elements(name)
-            timestamp_edge_hit = self.__find_elements(minimum_timestamp)
+            timestamp_edge_hit = self.__find_elements(minimum_timestamp, single_post)
             current_time = time.time()
             if self.__check_timeout(starting_time, current_time) is True:
                 logger.setLevel(logging.INFO)
                 logger.info('Timeout...')
                 break
             Utilities._Utilities__scroll_down(
-                self.__driver, self.__layout)  # scroll down
+                    self.__driver, self.__layout)  # scroll down
         # close the browser window after job is done.
         Utilities._Utilities__close_driver(self.__driver)
         # dict trimming, might happen that we find more posts than it was asked, so just trim it
         self.__data_dict = dict(list(self.__data_dict.items())[
                                 0:int(self.posts_count)])
-
+        
         return json.dumps(self.__data_dict, ensure_ascii=False)
-
+    
     def __json_to_csv(self, filename, json_data, directory):
-
+        
         os.chdir(directory)  # change working directory to given directory
         # headers of the CSV file
-        fieldnames = ['id', 'name', 'shares', 'likes', 'loves', 'wow', 'cares', 'sad', 'angry', 'haha', 'reactions_count', 'comments',
+        fieldnames = ['id', 'name', 'shares', 'likes', 'loves', 'wow', 'cares', 'sad', 'angry', 'haha',
+                      'reactions_count', 'comments',
                       'content', 'posted_on', 'video', 'images', 'post_url']
         # open and start writing to CSV files
         mode = 'w'
@@ -170,10 +179,10 @@ class Facebook_scraper:
                         'post_url':        post.get('post_url', '')
                 }
                 writer.writerow(row)  # write row to CSV file
-
+            
             data_file.close()  # after writing close the file
-
-    def scrap_to_csv(self, filename, directory=os.getcwd(),):
+    
+    def scrap_to_csv(self, filename, directory=os.getcwd(), ):
         try:
             data = self.scrap_to_json()  # get the data in JSON format from the same class method
             # convert it and write to CSV
@@ -182,7 +191,7 @@ class Facebook_scraper:
         except Exception as ex:
             logger.exception('Error at scrap_to_csv : {}'.format(ex))
             return False
-
+    
     def __remove_duplicates(self, all_posts):
         """takes a list of posts and removes duplicates from it and returns the list"""
         if len(self.__extracted_post) == 0:  # if self.__extracted_post is empty that means it is first extraction
@@ -196,18 +205,18 @@ class Facebook_scraper:
             # after removing duplicates, add all those new element to extracted_posts, as it
             self.__extracted_post.update(all_posts)
             return removed_duplicated  # is set() it won't have duplicate elements
-
+    
     def __close_after_retry(self):
         """returns if class member retry is 0"""
         return self.retry <= 0
-
+    
     def __no_post_found(self, all_posts):
         """if all_posts were found to be length of 0"""
         if len(all_posts) == 0:
             # if length of posts is 0,decrement retry by 1
             self.retry -= 1
-
-    def __find_elements(self, minimum_timestamp):
+    
+    def __find_elements(self, minimum_timestamp, single_post=False):
         """find elements of posts and add them to data_dict"""
         all_posts = Finder._Finder__find_all_posts(
                 self.__driver, self.__layout, self.isGroup)  # find all posts
@@ -215,13 +224,13 @@ class Facebook_scraper:
         self.previous_post_length = len(all_posts)
         # when the length of the posts is the same for 3 iterations, it means the script is going to loop indefinitely, so we are cutting it off
         if self.previous_post_length == len(all_posts):
-            self.infinite_loop_counter +=1
-
+            self.infinite_loop_counter += 1
+        
         if self.infinite_loop_counter >= 5:
             logger.info(f"Infinite loop counter reached : {self.infinite_loop_counter}, breaking loop")
             self.infinite_loop_counter = 0
             return True
-
+        
         # remove duplicates from the list
         all_posts = self.__remove_duplicates(
                 all_posts)
@@ -231,15 +240,17 @@ class Facebook_scraper:
             try:
                 # find post ID from post
                 status, post_url, link_element = Finder._Finder__find_status(
-                        post, self.__layout, self.isGroup, self.__driver, self.page_or_group_name)
+                        post, self.__layout, self.isGroup, self.__driver, self.page_or_group_name,
+                        single_post=single_post)
                 if post_url is None:
                     print("no post_url, skipping")
                     continue
                 
-                # Split the URL on the '?' character, to detach the referer or uneeded query info
-                parts = post_url.split('?')
-                # The first part of the list is the URL up to the '?'
-                post_url = parts[0]
+                if not ('permalink.php' in post_url):
+                    # Only when the link doesn't have permalink in it Split the URL on the '?' character, to detach the referer or uneeded query info
+                    parts = post_url.split('?')
+                    # The first part of the list is the URL up to the '?'
+                    post_url = parts[0]
                 
                 # finds name depending on if this facebook site is a page or group (we pass a post obj or a webDriver)
                 name = Finder._Finder__find_name(
@@ -330,7 +341,7 @@ class Facebook_scraper:
                     
                     # extract time
                     posted_time = Finder._Finder__find_posted_time(
-                            post, self.__layout, link_element, self.__driver, self.isGroup)
+                            post, self.__layout, link_element, self.__driver, self.isGroup, single_post=single_post)
                     
                     # getting post time and checking for minimum timestamp
                     if not self.isGroup:
@@ -355,7 +366,7 @@ class Facebook_scraper:
                         "user_url": name.get('url'),
                         "content":  post_content,
                         "images":   image.get('images'),
-                        "post_id":  image.get('post_id'),
+                        "post_id":  image.get('post_id') if image.get('post_id') else status,
                         "post_url": post_url,
                         "error":    image.get('error'),
                         # NOTE only include the following fields if scraping a page, not tested for groups yet

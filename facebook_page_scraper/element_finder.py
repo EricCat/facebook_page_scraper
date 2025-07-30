@@ -63,7 +63,7 @@ class Finder:
         return status
 
     @staticmethod
-    def __find_status(post, layout, isGroup, driver, page_or_group_name):
+    def __find_status(post, layout, isGroup, driver, page_or_group_name, single_post = False):
         """finds URL of the post, then extracts link from that URL and returns it"""
         try:
             link = None
@@ -82,41 +82,46 @@ class Finder:
                     status_link
                 )
             elif layout == "new":
-
                 driver.execute_script("arguments[0].scrollIntoView({ block: 'center', inline: 'center'});", post)
                 # try to hover over the time link
                 link = Utilities._Utilities__find_with_multiple_selectors(post, [
-                        'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]',
-                        'span > a[attributionsrc][role="link"][href="#"]'
+                    'span > a[attributionsrc][role="link"][href*="/posts/"]',
+                    'span > a[attributionsrc][role="link"][href*="/permalink"]',
+                    'span > a[attributionsrc][role="link"][href*="/videos"]',
+                    'span > a[attributionsrc][role="link"][href="#"]',
+                    'span > a[role="link"]' if isGroup else 'span > a[target="_blank"][role="link"]',
                 ])
                 actions = ActionChains(driver)
-                # scroll to the link
-                scrolling_script = """
-                     const element = arguments[0];
-                     const elementRect = element.getBoundingClientRect();
-                     const absoluteElementTop = elementRect.top + window.pageYOffset;
-                     const middle = absoluteElementTop - (window.innerHeight / 2);
-                     window.scrollTo(0, middle);
-                 """
-                driver.execute_script(scrolling_script, link)
+                if single_post:
+                    driver.execute_script("arguments[0].scrollIntoView();", link)
+                else:
+                    # scroll to the link
+                    scrolling_script = """
+                        const element = arguments[0];
+                        const elementRect = element.getBoundingClientRect();
+                        const absoluteElementTop = elementRect.top + window.pageYOffset;
+                        const middle = absoluteElementTop - (window.innerHeight / 2);
+                        window.scrollTo(0, middle);
+                    """
+                    driver.execute_script(scrolling_script, link)
                 Utilities._Utilities__close_force_login_popup(driver)
                 driver.execute_script("arguments[0].style.border='2px solid black'", link);
                 actions.move_to_element(link).perform()
                 Utilities._Utilities__close_force_login_popup(driver)
                 time.sleep(2)
-                
+
                 # actually not  useful to trigger the hover witht he mouse event
                 # should be deleted in the future
                 javaScript = """
-                     var evObj = document.createEvent('MouseEvents');
-                     evObj.initMouseEvent(\"mouseover\",true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-                     arguments[0].dispatchEvent(evObj);
-                 """
+                    var evObj = document.createEvent('MouseEvents');
+                    evObj.initMouseEvent(\"mouseover\",true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                    arguments[0].dispatchEvent(evObj);
+                """
                 driver.execute_script(javaScript, link)
                 try:
                     link = post.find_element(
-                            By.CSS_SELECTOR,
-                            'span > a[role="link"]' if isGroup else 'span > a[href*="/posts/"][role="link"]'
+                        By.CSS_SELECTOR,
+                        'span > a[role="link"]' if isGroup else 'span > a[href*="/posts/"][role="link"]'
                     )
                 except NoSuchElementException:
                     postId = Finder._Finder__find_post_id(post, layout)
@@ -125,7 +130,7 @@ class Finder:
                         print("constructed post Url ")
                         print(post_url)
                         return (postId, post_url, link)
-            
+
                 Utilities._Utilities__close_force_login_popup(driver)
                 if link is not None:
                     status_link = link.get_attribute("href")
@@ -334,7 +339,7 @@ class Finder:
         return content
 
     @staticmethod
-    def __find_posted_time(post, layout, link_element, driver, isGroup):
+    def __find_posted_time(post, layout, link_element, driver, isGroup, single_post = False):
         """finds posted time of the facebook post using selenium's webdriver's method"""
         try:
             # extract element that looks like <abbr class='_5ptz' data-utime="some unix timestamp"> </abbr>
@@ -376,26 +381,61 @@ class Finder:
                     timestamp = driver.execute_script(js_script, link_element)
                     logger.debug("TIMESTAMP: " + str(timestamp))
                 elif not isGroup:
-                    # getting the timestamp from teh tooltip after hovering the link
-                    logger.debug("getting timestamp from hovering tooltip")
-                    actions = ActionChains(driver)
-                    scrolling_script = """
-                                        const element = arguments[0];
-                                        const elementRect = element.getBoundingClientRect();
-                                        const absoluteElementTop = elementRect.top + window.pageYOffset;
-                                        const middle = absoluteElementTop - (window.innerHeight / 2);
-                                        window.scrollTo(0, middle);
-                                        """
-                    driver.execute_script(scrolling_script, link_element)
-                    actions.move_to_element(link_element).perform()
+                    try:
+                        # getting the timestamp from teh tooltip after hovering the link
+                        logger.debug("getting timestamp from hovering tooltip")
+                        actions = ActionChains(driver)
+                        is_link_stale = Utilities._Utilities__is_stale(link_element)
+                        print(f"link is stale {is_link_stale}")
+                        scrolling_script = """
+                            try {
+                                const element = arguments[0];
+                                console.log(element)
+                                const elementRect = element.getBoundingClientRect();
+                                const absoluteElementTop = elementRect.top + window.pageYOffset;
+                                const middle = absoluteElementTop - (window.innerHeight / 2);
+                                console.log(middle)
+                                window.scrollTo(0, middle);
+                                return true
+                            } catch(err) {
+                                return err.toString()
+                            }
+                        """
 
-                    parent_element = link_element.find_element(By.XPATH, "..")
-                    parent_element_described_by=parent_element.get_attribute("aria-describedby")
-                    if parent_element_described_by:
-                        tooltipElement = driver.find_element(By.CSS_SELECTOR, f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
+                        result = driver.execute_script(scrolling_script, link_element)
+                        logger.debug(f"scrolling script results {result}")
+                        # deciding if the link element is able to be hovered
+                        is_not_hidden = driver.execute_script("""
+                                var elem = arguments[0];
+                                var rect = elem.getBoundingClientRect();
+                                var centerX = rect.left + rect.width / 2;
+                                var centerY = rect.top + rect.height / 2;
+                                var topElem = document.elementFromPoint(centerX, centerY);
+                                return elem === topElem || elem.contains(topElem);
+                            """, link_element)
+                        if not is_not_hidden:
+                            driver.execute_script("arguments[0].scrollIntoView({block:'center',inline:'nearest'});", link_element)
+                        if single_post:
+                            driver.execute_script("arguments[0].scrollIntoView();", link_element)
+                        actions.move_to_element(link_element).pause(1).perform()
+
+                        parent_element = link_element.find_element_by_xpath("..")
+                        parent_element_described_by = parent_element.get_attribute("aria-describedby")
+
+                        # loop over the parent elements to find the id, in some cases the is is not on the parent but the grandparent element of the link
+                        retries = 0
+                        if parent_element_described_by is not None:
+                            logger.debug(f"found parent_element_described_by from the start {parent_element_described_by}")
+                        while parent_element_described_by is None and retries < 5:
+                            parent_element = parent_element.find_element(By.XPATH, "..")
+                            parent_element_described_by = parent_element.get_attribute("aria-describedby")
+                            logger.debug(f"parent_element_described_by : {parent_element.get_attribute('outerHTML')} in retry {retries}")
+                            retries += 1
+
+                        tooltipElement = driver.find_element(By.CSS_SELECTOR,
+                                                             f"[id*={parent_element_described_by.replace(':', '').replace(':', '')}]")
                         timestampContent = tooltipElement.get_attribute("innerText")
                         logger.debug(f"tooltipElement content : {timestampContent}")
-
                         timestamp = (
                             parse(timestampContent).isoformat()
                             if len(timestampContent) > 5
@@ -403,9 +443,11 @@ class Finder:
                                 timestampContent
                             )
                         )
-                    else:
-                        timestamp = ""
-                return timestamp
+                        return timestamp
+                    except Exception as ex:
+                        logger.exception("Error at find_posted_time method : {}".format(ex))
+                        raise ex
+
         except TypeError:
             timestamp = ""
         except Exception as ex:
@@ -421,8 +463,9 @@ class Finder:
             video_element = post.find_elements(By.TAG_NAME, "video")
             srcs = []
             for video in video_element:
-                video_url = video.get_attribute("src")
-                srcs.append(video_url.replace("blob:", ""))
+                # video_url = video.get_attribute("src")
+                # srcs.append(video_url.replace("blob:", ""))
+                srcs.append(video.get_attribute("src"))
         except NoSuchElementException:
             video = []
             pass
@@ -460,7 +503,11 @@ class Finder:
                 images = post.find_elements(
                     By.CSS_SELECTOR, "div > img[referrerpolicy]"
                 )
-            sources = [image.get_attribute("src") for image in images if image.get_attribute("src")] if images else []
+            sources = (
+                    [image.get_attribute("src") for image in images]
+                    if len(images) > 0
+                    else []
+            )
             # Filter out invalid image URLs
             valid_sources = [src for src in sources if Finder.__is_valid_image_url(src)]
         except NoSuchElementException:
@@ -495,7 +542,7 @@ class Finder:
             sources = None
             pass
         except Exception as ex:
-            logger.exception("Error at __find_post_id method : {}".format(ex))
+            logger.exception("Error at find_image_url method : {}".format(ex))
             sources = None
 
         return sources
@@ -538,8 +585,8 @@ class Finder:
                     By.CSS_SELECTOR, "div > img[referrerpolicy]"
                 )
 
-                # will open the fb carousel and get all the images
-                driver.set_window_size(1920, 1200)
+                # # will open the fb carousel and get all the images
+                # driver.set_window_size(1920, 1200)
 
                 photo_viewer_xpath = '//div[@aria-label="Photo Viewer"]'
 
@@ -564,7 +611,7 @@ class Finder:
                 except Exception as exce:
                     max_images_count = len(images)
                     logger.debug(exce)
-                first_url_element = images[0].find_element(By.XPATH, './ancestor::a')
+                first_url_element = images[0].find_element_by_xpath('./ancestor::a')
 
                 if '/photo' not in first_url_element.get_attribute('href'):
                     # the post has no photos, could be an event
@@ -577,7 +624,7 @@ class Finder:
 
                 try:
                     # wait for a second to have the photo viewer render
-                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element))
+                    WebDriverWait(driver, 20).until(EC.visibility_of(first_url_element));
                     driver.execute_script("arguments[0].scrollIntoView();", first_url_element)
                     ActionChains(driver).move_to_element_with_offset(first_url_element, 0, 0).click().perform()
                 except Exception as error:
@@ -656,7 +703,7 @@ class Finder:
             sources = []
             pass
         except Exception as ex:
-            logger.exception("Error at find_all_image_url method : {}".format(ex))
+            logger.exception("Error at find_image_url method : {}".format(ex))
             sources = []
 
         return {
@@ -765,6 +812,7 @@ class Finder:
                 pass
         except IndexError:
             logger.info("Index error occurred.")
+            pass
         except Exception as ex:
             logger.exception("Error at accept_cookies: {}".format(ex))
             sys.exit(1)

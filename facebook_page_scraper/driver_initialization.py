@@ -29,6 +29,7 @@ class Initializer:
         self.proxy = proxy
         self.headless = headless
         self.browser_path = browser_path
+        self.devTools = devTools
 
     def set_properties(self, browser_option):
         """adds capabilities to the driver"""
@@ -36,9 +37,8 @@ class Initializer:
             browser_option.add_argument(
                 '--headless')  # runs browser in headless mode
         else:
-            if self.browser_name.lower() == "firefox":
+            if self.devTools:
                 browser_option.add_argument("-devtools")
-
         browser_option.add_argument('--no-sandbox')
         browser_option.add_argument("--disable-dev-shm-usage")
         browser_option.add_argument('--ignore-certificate-errors')
@@ -48,7 +48,7 @@ class Initializer:
         browser_option.add_argument('--disable-popup-blocking')
         return browser_option
 
-    def set_driver_for_browser(self, browser_name, driver_install_config=None):
+    def set_driver_for_browser(self, browser_name, driver_install_config=None, remoteBrowser=None):
         """expects browser name and returns a driver instance"""
         if driver_install_config is None:
             driver_install_config = {}
@@ -69,7 +69,15 @@ class Initializer:
                 return webdriver.Chrome(executable_path=ChromeDriverManager().install(),
                                         options=self.set_properties(browser_option), seleniumwire_options=options)
 
-            return webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=self.set_properties(browser_option))
+            if remoteBrowser is not None:
+                if remoteBrowser.get('type') == 'browserless':
+                    ChromeDriverManager().install()
+                    browser_option.set_capability('browserless:token', remoteBrowser.get('token'))
+                    browser_option.add_argument('--headless')
+                    print(remoteBrowser)
+                    return webdriver.Remote(command_executor=remoteBrowser.get('command_executor'), options=self.set_properties(browser_option))
+            else:
+                return webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=self.set_properties(browser_option))
         elif browser_name.lower() == "firefox":
             browser_option = FirefoxOptions()
             if self.browser_path is not None:
@@ -91,7 +99,7 @@ class Initializer:
             # if browser_name is not chrome neither firefox than raise an exception
             raise Exception("Browser not supported!")
 
-    def init(self, driver_install_config):
+    def init(self, driver_install_config, remoteBrowser=None):
         """returns driver instance"""
-        driver = self.set_driver_for_browser(self.browser_name, driver_install_config=driver_install_config)
+        driver = self.set_driver_for_browser(self.browser_name, driver_install_config=driver_install_config, remoteBrowser=remoteBrowser)
         return driver
