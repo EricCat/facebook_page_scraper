@@ -15,6 +15,7 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 
 from .driver_utilities import Utilities
 from .scraping_utilities import Scraping_utilities
@@ -228,13 +229,19 @@ class Finder:
                     comments
                 )
             elif layout == "new":
-                element = post.find_element(
+                # will find multiple elements based on the selector, i estimate that there is only one element
+                # with a number in the text, and we will use that as the comment number
+                elements = post.find_elements(
                     By.CSS_SELECTOR, 'div:nth-child(1) > span > div > div > div:nth-child(1) > span'
                 )
                 comments = 0
-                if element is None:
-                    return comments
-                return element.text
+                for element in elements:
+                    text = element.text
+                    if text.isdigit():
+                        return text
+                    else:
+                        continue
+                return comments
         except NoSuchElementException:
             comments = 0
         except Exception as ex:
@@ -585,9 +592,6 @@ class Finder:
                     By.CSS_SELECTOR, "div > img[referrerpolicy]"
                 )
 
-                # # will open the fb carousel and get all the images
-                # driver.set_window_size(1920, 1200)
-
                 photo_viewer_xpath = '//div[@aria-label="Photo Viewer"]'
 
                 # will try to close the carousel if it's open TODO be sure this does work
@@ -656,24 +660,31 @@ class Finder:
                     try:
                         logger.debug("waiting for the image to render")
                         time.sleep(2)
-                        try:
-                            image = image_carousel_wrapper.find_element(
-                                By.XPATH, '//img[@data-visualcompletion]',
-                            )
-                        except:
-                            time.sleep(10)
-                            image = image_carousel_wrapper.find_element(
-                                By.XPATH, '//img[@data-visualcompletion]',
-                            )
+                        i=0
+                        image = None
+                        while i < 2:
+                            try:
+                                image = image_carousel_wrapper.find_element(
+                                    By.XPATH, '//img[@data-visualcompletion]',
+                                )
+                                i = 2
+                            except:
+                                logger.debug("image not found, retrying")
+                                time.sleep(2 * (i+1))
+                                i += 1
+                                continue
 
-                        if image.get_attribute('src') in image_src:
-                            next_button = None
-                            break
-                        WebDriverWait(driver, 30).until(lambda driver: is_image_loaded(driver, image))
-                        images.append(image)
-                        image_src.append(image.get_attribute('src'))
-                        logger.debug(f"image url : {image.get_attribute('src')}")
-                        Utilities._Utilities__close_force_login_popup(driver)
+                        if not image:
+                            logger.debug("image not found")
+                        else:
+                            if image.get_attribute('src') in image_src:
+                                next_button = None
+                                break
+                            WebDriverWait(driver, 30).until(lambda driver: is_image_loaded(driver, image))
+                            images.append(image)
+                            image_src.append(image.get_attribute('src'))
+                            logger.info(f"image url : {image.get_attribute('src')}")
+                            Utilities._Utilities__close_force_login_popup(driver)
                         carousel_buttons = image_carousel_wrapper.find_elements(
                             By.XPATH, '//div[@data-name="media-viewer-nav-container"]//div[@data-visualcompletion]'
                         )
@@ -690,9 +701,14 @@ class Finder:
                             'images': [image.get_attribute("src") for image in images] if len(images) > 0 else [],
                             'post_id': post_id
                         }
-                # closing the photo carousel to force next posts to render
-                carousel_closing_button = image_carousel_wrapper.find_element(By.XPATH, '//i[@data-visualcompletion="css-img"]')
-                ActionChains(driver).move_to_element(carousel_closing_button).click().perform()
+                try:
+                    # closing the photo carousel to force next posts to render
+                    carousel_closing_button = image_carousel_wrapper.find_element(By.XPATH,
+                                                                                  '//i[@data-visualcompletion="css-img"]')
+                    ActionChains(driver).move_to_element(carousel_closing_button).click().perform()
+                except Exception as exp:
+                    logger.debug(exp)
+                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 return {
                     'images': image_src,
                     'post_id': post_id
@@ -794,24 +810,7 @@ class Finder:
                 By.CSS_SELECTOR, '[aria-label="Allow essential and optional cookies"]'
             )
             button[-1].click()
-        except NoSuchElementException:
-            try:
-                # Use JavaScript to find the button containing the exact text "Allow all cookies"
-                buttons = driver.execute_script("""
-                    return Array.from(document.querySelectorAll('div[role="button"] span'))
-                                .filter(span => span.textContent.trim() === 'Allow all cookies');
-                """)
-                
-                # Check if any elements were found
-                if buttons:
-                    ActionChains(driver).move_to_element(buttons[0]).click().perform()  # Click the first one found
-                else:
-                    logger.info("No 'Allow all cookies' button found.")
-            except NoSuchElementException:
-                logger.info("No such element exception occurred.")
-                pass
-        except IndexError:
-            logger.info("Index error occurred.")
+        except (NoSuchElementException, IndexError):
             pass
         except Exception as ex:
             logger.exception("Error at accept_cookies: {}".format(ex))
